@@ -1,9 +1,10 @@
-FROM eclipse-temurin:17-jdk AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
-COPY src/Main.java .
-RUN javac -d out Main.java
+COPY pom.xml .
+COPY src ./src
+RUN mvn --batch-mode package
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-COPY --from=build /app/out ./
-ENTRYPOINT ["java", "-cp", "/app", "Main"]
+COPY --from=build /app/target/worker.jar ./worker.jar
+ENTRYPOINT ["java", "-jar", "/app/worker.jar"]

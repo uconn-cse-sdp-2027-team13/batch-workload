@@ -4,7 +4,7 @@ import java.nio.file.Path;
 public class Main {
     public static void main(String[] args) throws Exception {
         String jobId = requiredEnv("JOB_ID");
-        Path file = Path.of("/common").resolve(requiredEnv("FILE_PATH"));
+        Path file = Path.of("/data").resolve(requiredEnv("FILE_PATH"));
 
         System.out.println("Job " + jobId + ": reading " + file);
         Files.copy(file, System.out);
