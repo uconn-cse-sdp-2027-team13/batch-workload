@@ -14,4 +14,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-stage Dockerfile compiling worker with Maven and packaging into a lightweight `eclipse-temurin:17-jre` container ([#1](https://github.com/uconn-cse-sdp-2027-team13/batch-workload/issues/1)).
 - Portable Maven wrapper (`mvnw`) and `.mvn` configuration for reproducible builds ([#4](https://github.com/uconn-cse-sdp-2027-team13/batch-workload/issues/4)).
 - Comprehensive `.gitignore` covering Java, Maven, IDEs, and OS-generated files ([#4](https://github.com/uconn-cse-sdp-2027-team13/batch-workload/issues/4)).
+- Centralized GitHub Actions CI verification workflow calling reusable pipeline from org `.github` ([#4](https://github.com/uconn-cse-sdp-2027-team13/batch-workload/issues/4)).
 
