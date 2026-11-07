@@ -22,10 +22,10 @@ docker run --rm \
 ```
 
 The Docker build uses Maven and Java 17 to produce an executable JAR, then copies
-it into a Java 17 JRE image. With Maven and JDK 17+ installed, you can also build
-and run locally using an absolute input path:
+it into a Java 17 JRE image. With JDK 17+ installed, you can also build
+and run locally using the Maven wrapper:
 
 ```sh
-mvn package
+./mvnw clean package
 JOB_ID=example-job FILE_PATH="$PWD/data/input.txt" java -jar target/worker.jar
 ```
