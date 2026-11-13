@@ -16,6 +16,7 @@
         <mysql.version>8.4.0</mysql.version>
         <junit.jupiter.version>5.10.2</junit.jupiter.version>
         <h2.version>2.3.232</h2.version>
+        <aws.sdk.version>2.25.60</aws.sdk.version>
     </properties>
 
     <dependencies>
@@ -26,6 +27,12 @@
             <version>${mysql.version}</version>
         </dependency>
 
+        <!-- S3-compatible object storage (RustFS locally, AWS S3 in deployment). -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
         <!-- Test only: JUnit 5 runs the tests -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
