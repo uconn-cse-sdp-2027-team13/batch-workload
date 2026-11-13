@@ -1,31 +1,36 @@
 # Java 17 worker
 
-Reads `JOB_ID` and `FILE_PATH`, then streams the file to stdout. Relative file
-paths resolve under `/data`; absolute paths are used as supplied. Mount the
-input directory at `/data` in the container or Kubernetes pod. Missing variables
-or unreadable files cause a nonzero exit.
+The worker loads a CSV into MySQL and returns the exit code consumed by the
+orchestrator. It reads `JOB_ID`, `FILE_PATH`, `JDBC_URL`, `DB_USER`, and
+`DB_PASSWORD`; `BATCH_SIZE` is optional and defaults to 1000.
 
-The orchestrator's `common` module contains shared Java contracts and models; it
-is separate from the input directory. This standalone worker does not yet depend
-on that module. Shared-module integration and S3 input are future work; local
-file streaming remains the initial worker behavior.
+When all five S3 variables are set, `FILE_PATH` is an S3 object key and the
+worker streams that object directly into the CSV loader:
 
-Build and run from the repository root (the sample file is in `data/input.txt`):
+- `S3_ENDPOINT` (for example, `http://host.docker.internal:9000` for RustFS)
+- `S3_BUCKET`
+- `S3_ACCESS_KEY`
+- `S3_SECRET_KEY`
+- `S3_REGION` (for example, `us-east-1`)
 
-```sh
-docker build -t java-worker .
-docker run --rm \
-  -e JOB_ID=example-job \
-  -e FILE_PATH=input.txt \
-  --mount "type=bind,source=$PWD/data,target=/data,readonly" \
-  java-worker
-```
+The S3 client uses path-style access for S3-compatible storage. Partial S3
+configuration is rejected. Without S3 variables, `FILE_PATH` uses the local
+file fallback: relative paths resolve under `/data`, and absolute paths are
+used as supplied. Mount `/data` only for this standalone local-file mode.
 
-The Docker build uses Maven and Java 17 to produce an executable JAR, then copies
-it into a Java 17 JRE image. With JDK 17+ installed, you can also build
-and run locally using the Maven wrapper:
+Exit codes are `0` for success, `10` for retryable S3 or database failures, and
+`20` for invalid configuration, missing input objects, or invalid CSV headers.
+
+Build and run locally with the Maven wrapper:
 
 ```sh
 ./mvnw clean package
-JOB_ID=example-job FILE_PATH="$PWD/data/input.txt" java -jar target/worker.jar
+JOB_ID=example-job FILE_PATH="$PWD/data/input.csv" JDBC_URL=jdbc:mysql://localhost:3306/app \
+  DB_USER=worker DB_PASSWORD=secret java -jar target/worker.jar
 ```
+
+For a container workload, pass the database and S3 settings as environment
+variables. For example, `S3_ENDPOINT=http://host.docker.internal:9000` reaches
+RustFS from Docker Desktop Kubernetes when that endpoint is reachable from the
+pod. The Docker image builds the executable shaded JAR with Maven and runs it
+on Java 17.
