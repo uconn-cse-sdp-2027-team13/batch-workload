@@ -1,3 +1,4 @@
+import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Map;
@@ -9,10 +10,12 @@ import java.util.Map;
 record WorkerConfig(
         String jobId,
         Path file,
+        String objectKey,
         String jdbcUrl,
         String dbUser,
         String dbPassword,
-        int batchSize) {
+        int batchSize,
+        S3Config s3) {
 
     static final int DEFAULT_BATCH_SIZE = 1000;
     static final int MIN_BATCH_SIZE = 1000;
@@ -22,13 +25,21 @@ record WorkerConfig(
     private static final Path DATA_DIR = Path.of("/data");
 
     static WorkerConfig fromEnv(Map<String, String> env) {
+        String objectKey = required(env, "FILE_PATH");
+        S3Config s3 = S3Config.fromEnv(env);
         return new WorkerConfig(
                 required(env, "JOB_ID"),
-                filePath(required(env, "FILE_PATH")),
+                s3 == null ? filePath(objectKey) : null,
+                objectKey,
                 required(env, "JDBC_URL"),
                 required(env, "DB_USER"),
                 required(env, "DB_PASSWORD"),
-                batchSize(env.get("BATCH_SIZE")));
+                batchSize(env.get("BATCH_SIZE")),
+                s3);
+    }
+
+    boolean usesS3() {
+        return s3 != null;
     }
 
     private static String required(Map<String, String> env, String name) {
@@ -63,5 +74,37 @@ record WorkerConfig(
                     "BATCH_SIZE must be between " + MIN_BATCH_SIZE + " and " + MAX_BATCH_SIZE + ", got: " + size);
         }
         return size;
+    }
+}
+
+/** Complete S3 settings. Partial configuration is rejected instead of silently using local storage. */
+record S3Config(URI endpoint, String bucket, String accessKey, String secretKey, String region) {
+
+    static S3Config fromEnv(Map<String, String> env) {
+        String[] names = {"S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_REGION"};
+        boolean any = false;
+        for (String name : names) {
+            any |= env.containsKey(name) && !env.get(name).isBlank();
+        }
+        if (!any) {
+            return null;
+        }
+        for (String name : names) {
+            if (env.get(name) == null || env.get(name).isBlank()) {
+                throw new WorkerInputException(name + " is required when S3 is configured");
+            }
+        }
+        URI endpoint;
+        try {
+            endpoint = URI.create(env.get("S3_ENDPOINT"));
+        } catch (IllegalArgumentException e) {
+            throw new WorkerInputException("S3_ENDPOINT must be a valid HTTP(S) URL");
+        }
+        if (!("http".equalsIgnoreCase(endpoint.getScheme()) || "https".equalsIgnoreCase(endpoint.getScheme()))
+                || endpoint.getHost() == null || endpoint.getUserInfo() != null) {
+            throw new WorkerInputException("S3_ENDPOINT must be a valid HTTP(S) URL");
+        }
+        return new S3Config(endpoint, env.get("S3_BUCKET"), env.get("S3_ACCESS_KEY"),
+                env.get("S3_SECRET_KEY"), env.get("S3_REGION"));
     }
 }
